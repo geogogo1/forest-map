@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "AP3049NBN08",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::32647" } },
+"features": [
+{ "type": "Feature", "properties": { "NAME_DNP_T": "เขตห้ามล่าสัตว์ป่า", "NAME_DNP": "เขาน้อย-เขาประดู่", "CODE_DNP": "3049", "APAR_CODE": "30491000110010NBN08", "APAR_NO": "10010", "NUM_APAR": "10001", "SPAR_CODE": "30490020410010NBN08", "SPAR_NO": "10010", "NUM_SPAR": "00204", "E": 643428.0, "N": 1903276.0, "PAR_BAN": "หนองบอน", "BAN_E": "NBN", "PAR_MOO": "08", "PAR_TAM": "คันโช้ง", "PAR_AMP": "วัดโบสถ์", "PAR_PROV": "พิษณุโลก", "NAME_TITLE": "นาง", "NAME": "จรัญ", "SURNAME": "นวญป้อง", "IDCARD": "3650700348483", "HOME_NO": "8", "HOME_BAN": null, "HOME_TAM": "คันโช้ง", "HOME_AMP": "วัดโบสถ์", "HOME_PROV": "พิษณุโลก", "PERIMETER": 0.05124476569, "AREA_RAI": 0.07879199106, "RAI": 0.0, "NGAN": 0.0, "WA_SQ": 31.5, "BAN_TYPE": "2", "YEAR": "2560" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 643438.147217000019737, 1903277.21741 ], [ 643428.35999999998603, 1903268.110000000102445 ], [ 643425.959999999962747, 1903269.879999999888241 ], [ 643419.21999999997206, 1903283.29 ], [ 643438.147217000019737, 1903277.21741 ] ] ] ] } }
+]
+}
