@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>ระบบจัดการพื้นที่ป่าอนุรักษ์ - Interactive Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --forest-green: #327229;
+            --highlight-blue: #00d4ff; 
+            --light-gray: #f8f9fa;
+            --border-color: #ddd;
+            --highlight-yellow: #ffcc00;
+            --edit-orange: #ffa500;
+            --active-magenta: #6cb9d2;
+        }
+
+        body { font-family: 'Sarabun', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: #e9ecef; }
+        header { background: var(--forest-green); color: white; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; gap: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .header-controls { display: flex; align-items: center; gap: 15px; }
+        .area-select { padding: 8px 15px; border-radius: 5px; border: 2px solid var(--highlight-yellow); font-family: 'Sarabun'; font-size: 14px; cursor: pointer; background: white; color: var(--forest-green); font-weight: bold; }
+        .search-main { background: rgb(246, 244, 244); border-radius: 4px; display: flex; width: 300px; padding: 5px 10px; border: 1px solid #ccc; }
+        .search-main input { border: none; outline: none; width: 100%; font-family: 'Sarabun'; background: transparent; }
+        .alphabet-nav { background: rgb(172, 181, 173); padding: 10px; display: flex; justify-content: center; gap: 5px; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; }
+        .letter { border: 1px solid var(--border-color); background: rgb(228, 233, 231); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
+        .letter:hover { background: var(--forest-green); color: white; }
+        .main-layout { display: flex; flex: 1; overflow: hidden; padding: 15px; gap: 15px; }
+        #map { flex: 2; border-radius: 12px; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: relative; z-index: 1; }
+        .sidebar { flex: 1; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow-y: auto; }
+        .name-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; transition: 0.2s; border-radius: 6px; margin-bottom: 5px; border-left: 4px solid transparent; }
+        .name-item:hover { background: #f0fdf4; border-left: 4px solid var(--active-magenta); transform: translateX(5px); }
+        .name-item b { color: var(--forest-green); display: block; font-size: 16px; }
+        .btn-back { margin-top: 10px; width: 100%; padding: 12px; background: var(--forest-green); color: white; border: none; border-radius: 8px; cursor: pointer; font-family: 'Sarabun'; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .info-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .info-table td { padding: 10px 8px; border-bottom: 1px solid #eee; vertical-align: top; font-size: 14px; }
+        .info-table td:first-child { font-weight: bold; color: #666; width: 110px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div style="font-weight: bold; font-size: 1.2em; white-space: nowrap;">🌿 ระบบพื้นที่ป่าอนุรักษ์</div>
+        <div class="header-controls">
+            <select class="area-select" id="areaPicker" onchange="changeArea(this.value)">
+                <option value="all" selected>แสดงพื้นที่ทั้งหมด</option>
+                <option value="geojson/land_data.geojson">1. เขตป่ารักษาพันธุ์สัตว์ป่าภูเมี่ยงและภูทอง</option>
+                <option value="geojson/pd.geojson">2. เขตห้ามล่าสัตว์ป่าเขาน้อย-เขาประดู่</option>
+                <option value="geojson/ty.geojson">3. เขตรักษาพันธุ์สัตว์ป่าตะเบาะ-ห้วยใหญ่ </option>
+                <option value="geojson/ctg.geojson">4. อุทยานแห่งชาติน้ำตกชาติตระการ </option>
+                <option value="geojson/TS.geojson">5. อุทยานแห่งชาติทุ่งแสลงหลวง </option>
+            </select>
+            <div class="search-main">
+                <input type="text" id="searchInput" placeholder="พิมพ์ชื่อ-นามสกุล..." onkeyup="if(event.key==='Enter') executeSearch()">
+                <button onclick="executeSearch()" style="border:none; background:none; cursor:pointer;">🔍</button>
+            </div>
+        </div>
+        <div style="font-size: 20px;">👤</div>
+    </header>
+
+    <nav class="alphabet-nav" id="alphabetNav"></nav>
+
+    <div class="main-layout">
+        <div id="map"></div>
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-default" style="width:100%; text-align:center; padding-top:50px;">
+                <div style="font-size: 60px; opacity: 0.2;">📂</div>
+                <h3>ยังไม่ได้เลือกแปลงที่ดิน</h3>
+                <p>กรุณาคลิกเลือกแปลงที่ดินบนแผนที่<br>หรือพิมพ์ค้นหาด้านบน</p>
+            </div>
+            <div id="sidebar-detail" style="display:none; width:100%;"></div>
+        </aside>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map').setView([17.45, 100.77], 10); 
+        let geoLayer; 
+        window.currentSelectedLayer = null; 
+
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Esri World Imagery'
+        }).addTo(map);
+
+        const allFiles = ['geojson/land_data.geojson', 'geojson/pd.geojson', 'geojson/ty.geojson', 'geojson/ctg.geojson', 'geojson/TS.geojson'];
+
+        const letters = ['ก','ข','ค','ง','จ','ฉ','ช','ซ','ญ','ด','ต','ถ','ท','ธ','น','บ','ป','ผ','ฝ','พ','ฟ','ภ','ม','ย','ร','ล','ว','ส','ห','อ'];
+        const nav = document.getElementById('alphabetNav');
+        letters.forEach(l => {
+            const div = document.createElement('div');
+            div.className = 'letter';
+            div.innerText = l;
+            div.onclick = () => { document.getElementById('searchInput').value = l; executeSearch(); };
+            nav.appendChild(div);
+        });
+
+        function changeArea(value) {
+            if (!value) return;
+            if (geoLayer) map.removeLayer(geoLayer);
+            const urls = (value === 'all') ? allFiles : [value];
+            Promise.all(urls.map(url => fetch(url).then(res => res.json()).catch(() => ({features: []}))))
+                .then(dataArray => {
+                    const combined = { type: "FeatureCollection", features: dataArray.flatMap(d => d.features) };
+                    renderGeoJSON(combined);
+                });
+        }
+
+        function renderGeoJSON(data) {
+            geoLayer = L.geoJSON(data, {
+                style: { "color": "#ffff00", "weight": 2, "fillColor": "#327229", "fillOpacity": 0.4 },
+                onEachFeature: (f, l) => l.on('click', (e) => showDetail(f, l))
+            }).addTo(map);
+            if (geoLayer.getLayers().length > 0) map.fitBounds(geoLayer.getBounds());
+            resetSidebar();
+        }
+
+        function showDetail(feature, layer) {
+            if (window.currentSelectedLayer) geoLayer.resetStyle(window.currentSelectedLayer);
+            window.currentSelectedLayer = layer;
+            layer.setStyle({ color: '#ff00ff', weight: 6, fillColor: '#ff00ff', fillOpacity: 0.5 });
+            layer.bringToFront();
+            map.flyToBounds(layer.getBounds(), { padding: [50, 50], duration: 1.2 });
+
+            const p = feature.properties;
+            
+            const fullName = `${p.NAME_TITLE || p.name_title || ''}${p.NAME || p.name || ''} ${p.SURNAME || p.surname || ''}`.trim();
+            const homeNo = p.HOME_NO || p.home_no || '-';
+            const ban = p.PAR_BAN || p.par_ban || p.HOME_BAN || p.home_ban || '-';
+            const moo = p.PAR_MOO || p.par_moo || p.HOME_MOO || p.home_moo || '-';
+            const tam = p.PAR_TAM || p.par_tam || p.HOME_TAM || p.home_tam || '-';
+            const amp = p.PAR_AMP || p.par_amp || p.HOME_AMP || p.home_amp || '-';
+            const area = p.AREA_RAI || p.area_rai || p.RAI || '-';
+
+            document.getElementById('sidebar-default').style.display = 'none';
+            const detail = document.getElementById('sidebar-detail');
+            detail.style.display = 'block';
+            detail.innerHTML = `
+                <div style="text-align:left;">
+                    <h2 style="color:var(--forest-green); margin-bottom:10px;">📋 ข้อมูลผู้ถือครอง</h2>
+                   
+                    <table class="info-table">
+                        <tr><td>ชื่อ-นามสกุล</td><td style="color:var(--forest-green); font-weight:bold; font-size:18px;">${fullName}</td></tr>
+                        <tr><td>บ้านเลขที่</td><td>${homeNo}</td></tr>
+                        <tr><td>ที่ตั้งแปลง</td><td>บ้าน${ban} ม.${moo} ต.${tam} อ.${amp}</td></tr>
+                        <tr><td>พื้นที่ (ไร่)</td><td style="color:blue; font-weight:bold;">${parseFloat(area).toFixed(2)} ไร่</td></tr>
+                    </table>
+                    <button class="btn-back" onclick="resetSidebar()">🔄 กลับหน้าหลัก</button>
+                </div>
+            `;
+            layer.bindPopup(`<b>${fullName}</b>`).openPopup();
+        }
+
+        function executeSearch() {
+            const val = document.getElementById('searchInput').value.trim().toLowerCase();
+            if (!geoLayer || !val) return;
+            const detail = document.getElementById('sidebar-detail');
+            document.getElementById('sidebar-default').style.display = 'none';
+            detail.style.display = 'block';
+            detail.innerHTML = `<h3 style="color:var(--forest-green); border-bottom:2px solid #eee;">🔍 ค้นหา: "${val}"</h3>`;
+
+            let count = 0;
+            geoLayer.eachLayer(layer => {
+                const p = layer.feature.properties;
+                const fname = (p.NAME || p.name || "").toString().toLowerCase();
+                const lname = (p.SURNAME || p.surname || "").toString().toLowerCase();
+                // ยังให้ค้นหาจากรหัสได้อยู่เบื้องหลังเผื่อกรณีผู้ใช้ต้องการ แต่จะไม่แสดงรหัสออกมาให้เห็น
+                const spar = (p.SPAR_CODE || p.spar_code || p.SPAR || "").toString().toLowerCase();
+                
+                if (fname.includes(val) || lname.includes(val) || spar.includes(val)) {
+                    count++;
+                    const item = document.createElement('div');
+                    item.className = 'name-item';
+                    // ตัดส่วน <small>รหัส: ...</small> ออกแล้ว
+                    item.innerHTML = `<b>${count}. ${p.NAME_TITLE || p.name_title || ""}${p.NAME || p.name || ""} ${p.SURNAME || p.surname || ""}</b>`;
+                    item.onclick = () => showDetail(layer.feature, layer);
+                    detail.appendChild(item);
+                }
+            });
+            if (count === 0) detail.innerHTML += "<p style='color:red;'>❌ ไม่พบข้อมูล</p>";
+        }
+
+        function resetSidebar() {
+            if (window.currentSelectedLayer) {
+                geoLayer.resetStyle(window.currentSelectedLayer);
+                window.currentSelectedLayer = null;
+            }
+            map.closePopup();
+            
+            if (geoLayer && geoLayer.getLayers().length > 0) {
+                map.fitBounds(geoLayer.getBounds(), { padding: [20, 20], duration: 1.5 });
+            }
+            
+            document.getElementById('sidebar-default').style.display = 'block';
+            document.getElementById('sidebar-detail').style.display = 'none';
+            document.getElementById('searchInput').value = '';
+        }
+
+        window.onload = () => changeArea('all');
+    </script>
+</body>
+</html>
