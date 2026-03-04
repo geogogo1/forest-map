@@ -8,10 +8,10 @@
     <style>
         :root {
             --forest-green: #375a33;
-            --highlight-yellow: #6B8E23;
+            --highlight-yellow: #68950d;
             --edit-orange: #ffa500;
             --save-blue: #2196F3;
-            --active-magenta: #ff00ff;
+            --active-magenta: #42725a;
         }
 
         body { font-family: 'Sarabun', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: #e9ecef; }
@@ -51,8 +51,8 @@
         <div style="font-weight: bold; font-size: 1.2em; white-space: nowrap;">🌿 ระบบพื้นที่ป่าอนุรักษ์</div>
         <div class="header-controls">
             <select class="area-select" id="areaPicker" onchange="changeArea(this.value)">
-                <option value="all">แสดงพื้นที่ทั้งหมด (25 เขต)</option>
-                <option value="geojson/land_data.geojson">1. เขตป่ารักษาพันธุ์สัตว์ป่าภูเมี่ยงและภูทอง</option>
+                <option value="all">แสดงพื้นที่ทั้งหมด </option>
+                <option value="geojson/pmpn.geojson">1. เขตป่ารักษาพันธุ์สัตว์ป่าภูเมี่ยงและภูทอง</option>
                 <option value="geojson/pd.geojson">2. เขตห้ามล่าสัตว์ป่าเขาน้อย-เขาประดู่</option>
                 <option value="geojson/ty.geojson">3. เขตรักษาพันธุ์สัตว์ป่าตะเบาะ-ห้วยใหญ่ </option>
                 <option value="geojson/ctg.geojson">4. อุทยานแห่งชาติน้ำตกชาติตระการ </option>
@@ -71,14 +71,14 @@
                 <option value="geojson/tsy.geojson">17. อุทยานแห่งชาติต้นสักใหญ่ </option>
                 <option value="geojson/wp.geojson">18. เขตห้ามล่าสัตว์ป่าวังโป่ง-ชนแดน </option>
                 <option value="geojson/namn.geojson">19. อุทยานแห่งชาติน้ำหนาว </option>
-                <option value="geojson/puprd.geojson">21. เขตรักษาพันธุ์สัตว์ป่าภูผาแดง </option>
-                <option value="geojson/sn.geojson">22. อุทยานแห่งชาติศรีน่าน </option>
-                <option value="geojson/phal.geojson">23. เขตรักษาพันธุ์สัตว์ป่าภูหลวง </option>
-                <option value="geojson/ply.geojson">24. เขตห้ามล่าสัตว์ป่าห้วยผึ้ง-วังยาว </option>
-                <option value="geojson/tm.geojson">25. อุทยานแห่งชาติตาดหมอก </option>
+                <option value="geojson/puprd.geojson">20. เขตรักษาพันธุ์สัตว์ป่าภูผาแดง </option>
+                <option value="geojson/sn.geojson">21. อุทยานแห่งชาติศรีน่าน </option>
+                <option value="geojson/phal.geojson">22. เขตรักษาพันธุ์สัตว์ป่าภูหลวง </option>
+                <option value="geojson/ply.geojson">23. เขตห้ามล่าสัตว์ป่าห้วยผึ้ง-วังยาว </option>
+                <option value="geojson/tm.geojson">24. อุทยานแห่งชาติตาดหมอก </option>
             </select>
             <div class="search-main">
-                <input type="text" id="searchInput" placeholder="ค้น ชื่อ, หมู่บ้าน, หรือชื่อป่า..." onkeyup="if(event.key==='Enter') executeSearch()">
+                <input type="text" id="searchInput" placeholder="ค้น ชื่อคน, หมู่บ้าน, หรือชื่อป่า..." onkeyup="if(event.key==='Enter') executeSearch()">
                 <button onclick="executeSearch()" style="border:none; background:none; cursor:pointer;">🔍</button>
             </div>
         </div>
@@ -119,7 +119,6 @@
             nav.appendChild(div);
         });
 
-        // ฟังก์ชันหัวใจสำคัญ: ดึงข้อมูลจากคอลัมน์แบบไม่สนตัวพิมพ์เล็กใหญ่
         function getVal(obj, key) {
             if (!obj) return '';
             const foundKey = Object.keys(obj).find(k => k.toLowerCase() === key.toLowerCase());
@@ -145,7 +144,7 @@
             if (geoLayer) map.removeLayer(geoLayer);
             
             const allFiles = [
-                'geojson/land_data.geojson', 'geojson/pd.geojson', 'geojson/ty.geojson', 
+                'geojson/pmpn.geojson', 'geojson/pd.geojson', 'geojson/ty.geojson', 
                 'geojson/ctg.geojson', 'geojson/TS.geojson', 'geojson/plg.geojson',
                 'geojson/tp.geojson', 'geojson/kkk.geojson', 'geojson/lnn.geojson',
                 'geojson/lnnl.geojson', 'geojson/mjl.geojson', 'geojson/np.geojson',
@@ -198,23 +197,15 @@
         function renderDetailTable(p, center) {
             const detail = document.getElementById('sidebar-detail');
             const area = getVal(p, 'area_rai') || getVal(p, 'rai') || 0;
-            
-            // ข้อมูลหมู่บ้าน (รองรับทั้ง par_ban และ PAR_BAN)
             const village = p.par_village || getVal(p, 'PAR_BAN') || '';
-            
-            // ข้อมูลป่า (รองรับ NAME_DNP_T, NAME_DNP ทั้งเล็กและใหญ่)
-            let forestValue = p.forest_name;
-            if (!forestValue) {
-                const ft = getVal(p, 'NAME_DNP_T');
-                const fe = getVal(p, 'NAME_DNP');
-                forestValue = [ft, fe].filter(Boolean).join(' ');
-            }
+            let forestValue = p.forest_name || [getVal(p, 'NAME_DNP_T'), getVal(p, 'NAME_DNP')].filter(Boolean).join(' ');
 
             detail.innerHTML = `
                 <div style="text-align:left;">
-                    <h2 style="color:var(--forest-green); margin-bottom:10px;">📋 ข้อมูลผู้ถือครอง</h2>
+                    <h2 style="color:var(--forest-green); margin-bottom:10px;"> ข้อมูลผู้ถือครอง</h2>
                     <table class="info-table">
                         <tr><td>ชื่อ-นามสกุล</td><td>${getVal(p, 'name_title')}${getVal(p, 'name')} ${getVal(p, 'surname')}</td></tr>
+                        <tr><td>เลขที่แปลง</td><td>${getVal(p, 'NUM_APAR') || '-'}</td></tr>
                         <tr><td>บ้านเลขที่</td><td>${getVal(p, 'home_no') || '-'}</td></tr>
                         <tr>
                             <td>ที่ตั้งแปลง</td>
@@ -256,9 +247,8 @@
                         </tr>
                         <tr>
                             <td>หมายเหตุ</td>
-                            <td><textarea id="input-remark" class="edit-input" style="height:60px; resize:none;">${getVal(p, 'remark') || ''}</textarea></td>
-                        </tr>
-                        <tr><td>พิกัดกลางแปลง</td><td style="color:#e91e63;">${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}</td></tr>
+                            <td><textarea id="input-remark" class="edit-input" style="height:60px; resize:none;" placeholder="ระบุหมายเหตุที่นี่...">${getVal(p, 'remark') || ''}</textarea></td>
+                        </tr>                        <tr><td>พิกัดกลางแปลง</td><td style="color:#e91e63;">${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}</td></tr>
                     </table>
                     <button class="btn-action btn-save" onclick="saveData()">💾 บันทึกข้อมูล</button>
                     <button class="btn-action btn-back" onclick="resetSidebar()">🔄 กลับหน้าหลัก</button>
@@ -296,26 +286,39 @@
             let count = 0;
             geoLayer.eachLayer(layer => {
                 const p = layer.feature.properties;
-                // รวมข้อมูลทุกอย่างมาเช็คแบบ Case-Insensitive
-                const fullName = (getVal(p, 'name') + getVal(p, 'surname')).toLowerCase();
-                const village = (p.par_village || getVal(p, 'PAR_BAN') || '').toLowerCase();
-                const forest = (p.forest_name || getVal(p, 'NAME_DNP_T') + getVal(p, 'NAME_DNP') || '').toLowerCase();
+                // เทคนิคค้นหา: รวมค่าทุกคอลัมน์เป็น String เดียวเพื่อเช็ค
+                const allDataString = Object.values(p).join(" ").toLowerCase();
 
-                if (fullName.includes(val) || village.includes(val) || forest.includes(val)) {
+                if (allDataString.includes(val)) {
                     count++;
                     const item = document.createElement('div');
                     item.className = 'name-item';
+                    
+                    const name = `${getVal(p, 'name_title')}${getVal(p, 'name')} ${getVal(p, 'surname')}`;
+                    const village = getVal(p, 'PAR_BAN') || p.par_village || 'ไม่ระบุหมู่บ้าน';
+
+                    // ดึงค่าป่า 2 คอลัมน์มาโชว์คู่กัน
+                    const forestTH = getVal(p, 'NAME_DNP_T');
+                    const forestEN = getVal(p, 'NAME_DNP');
+                    let forestDisplay = "";
+                    if (forestTH && forestEN) {
+                        forestDisplay = `${forestTH} (${forestEN})`;
+                    } else {
+                        forestDisplay = forestTH || forestEN || p.forest_name || 'ไม่ระบุชื่อป่า';
+                    }
+                    
                     item.innerHTML = `
-                        <b style="color:var(--forest-green);">${count}. ${getVal(p, 'name_title')}${getVal(p, 'name')} ${getVal(p, 'surname')}</b>
-                        <div style="font-size: 12px; color: #666; margin-top: 4px;">
-                             ${village || 'ไม่ระบุหมู่บ้าน'} |  ${p.forest_name || getVal(p, 'NAME_DNP_T') || 'ไม่ทราบชื่อป่า'}
+                        <b style="color:var(--forest-green);">${count}. ${name}</b>
+                        <div style="font-size: 11px; color: #666; margin-top: 4px; line-height: 1.4;">
+                               ${village} <br>
+                               ${forestDisplay}
                         </div>
                     `;
                     item.onclick = () => showDetail(layer.feature, layer);
                     detail.appendChild(item);
                 }
             });
-            if (count === 0) detail.innerHTML += "<p style='color:red; text-align:center;'>❌ ไม่พบข้อมูล</p>";
+            if (count === 0) detail.innerHTML += "<p style='color:red; text-align:center;'>❌ ไม่พบข้อมูลที่เกี่ยวข้อง</p>";
         }
 
         function resetSidebar() {
